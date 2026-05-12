@@ -1,0 +1,70 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.6'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+description = 'OTel + Prometheus + Grafana — 3-Pillar Observability POC'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+    mavenCentral()
+}
+
+// Separate config so the agent jar is resolved from Maven Central but NOT
+// added to the application classpath (it runs as -javaagent, not a library).
+configurations {
+    otelAgent
+}
+
+dependencies {
+    // ── Web ──────────────────────────────────────────────────────────────────
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // ── PILLAR 1 — METRICS ───────────────────────────────────────────────────
+    // Prometheus registry: exposes /actuator/prometheus for Prometheus to scrape
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
+    // ── PILLAR 2 — TRACING ───────────────────────────────────────────────────
+    // @WithSpan annotation: the OTel Java agent instruments these at bytecode
+    // level — no AOP, no in-process SDK config needed.
+    implementation 'io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:2.14.0'
+
+    // ── PILLAR 3 — LOGS ──────────────────────────────────────────────────────
+    // Loki4j appender: pushes structured log lines directly to Loki over HTTP
+    implementation 'com.github.loki4j:loki-logback-appender:1.5.2'
+
+    // ── OTel Java Agent ──────────────────────────────────────────────────────
+    // Downloaded from Maven Central into build/agent/ by copyOtelAgent.
+    // NOT on the app classpath — added to the JVM via -javaagent in Dockerfile.
+    // The agent auto-instruments: Spring MVC, Tomcat, JDBC, Kafka, …
+    // It also injects trace_id/span_id into Logback MDC automatically.
+    otelAgent 'io.opentelemetry.javaagent:opentelemetry-javaagent:2.14.0'
+
+    // ── Test ─────────────────────────────────────────────────────────────────
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// Copy the agent jar to build/agent/ so the Dockerfile can pick it up.
+// This task runs before 'build' so the agent is ready when the image is built.
+tasks.register('copyOtelAgent', Copy) {
+    from configurations.otelAgent
+    into layout.buildDirectory.dir('agent')
+    rename { 'opentelemetry-javaagent.jar' }
+}
+
+tasks.named('build') {
+    dependsOn 'copyOtelAgent'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

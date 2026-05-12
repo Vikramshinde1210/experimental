@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  logback-spring.xml
+  The OTel Java Agent instruments Logback and automatically injects these MDC
+  keys for every active span:
+    trace_id    — 32-char hex OTel trace ID
+    span_id     — 16-char hex OTel span ID
+    trace_flags — "01" when sampled
+
+  NOTE: the agent uses trace_id (underscore), not traceId (camelCase).
+  The Loki derivedFields regex in datasources.yml matches "trace_id=(\w+)".
+-->
+<configuration>
+
+    <springProperty name="APP_NAME"  source="spring.application.name" defaultValue="otel-poc"/>
+    <springProperty name="LOKI_URL"  source="loki.url"                defaultValue="http://localhost:3100"/>
+
+    <!-- ── CONSOLE ───────────────────────────────────────────────────────── -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5level [${APP_NAME},%X{trace_id},%X{span_id}] [%thread] %-40logger{39} : %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ── LOKI ──────────────────────────────────────────────────────────── -->
+    <!--
+      Loki4j batches events and POSTs them to Loki.
+      Label keys must be low-cardinality (indexed by Loki).
+      The message body embeds trace_id so Grafana's derivedFields can parse it
+      and render a clickable link straight to the Tempo trace view.
+    -->
+    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+        <http>
+            <url>${LOKI_URL}/loki/api/v1/push</url>
+        </http>
+        <format>
+            <label>
+                <pattern>app=${APP_NAME},level=%level,host=${HOSTNAME:-localhost}</pattern>
+            </label>
+            <message>
+                <pattern>level=%level trace_id=%X{trace_id} span_id=%X{span_id} logger=%logger message=%msg</pattern>
+            </message>
+            <sortByTime>true</sortByTime>
+        </format>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="LOKI"/>
+    </root>
+
+    <logger name="com.example" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="LOKI"/>
+    </logger>
+
+</configuration>

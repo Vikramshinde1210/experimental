@@ -1,0 +1,43 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  Prometheus Scrape Configuration
+#
+#  Jobs:
+#   spring-boot-app  — pulls JVM + HTTP + custom business metrics from the app
+#   node-exporter    — pulls host CPU / memory / disk / network metrics
+#   otel-collector   — pulls OTel Collector's own operational metrics
+#   prometheus       — Prometheus scrapes itself (meta-monitoring)
+#
+#  Tempo's metrics_generator pushes service-graph and span metrics via
+#  remote_write (enabled by --web.enable-remote-write-receiver flag).
+# ─────────────────────────────────────────────────────────────────────────────
+
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: docker-compose
+    environment: local
+
+scrape_configs:
+
+  # Spring Boot application — JVM + HTTP + custom business metrics
+  - job_name: 'spring-boot-app'
+    static_configs:
+      - targets: ['app:8080']
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+
+  # Node Exporter — host / node metrics (CPU, memory, disk, network)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # OTel Collector — collector pipeline metrics (spans received, dropped, etc.)
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8889']
+
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

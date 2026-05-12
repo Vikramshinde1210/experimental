@@ -1,0 +1,212 @@
+version: '3.8'
+
+# ── Project name ──────────────────────────────────────────────────────────────
+#  Sets the Docker Compose project namespace. All resources created by this
+#  file are prefixed/tagged with "otel-poc":
+#    Containers : otel-poc-app, otel-poc-prometheus, …  (via container_name)
+#    Network    : otel-poc_observability
+#    Volumes    : otel-poc_prometheus-data, otel-poc_grafana-data, …
+#
+#  Cleanup (one command removes everything):
+#    docker compose down --volumes --rmi local
+#      --volumes   → deletes named volumes (Prometheus TSDB, Loki chunks, …)
+#      --rmi local → removes the locally-built app image
+#      --rmi all   → also removes pulled images (prometheus, grafana, …)
+#
+#  Filter containers / images by label:
+#    docker ps          --filter "label=project=otel-poc"
+#    docker images      --filter "label=project=otel-poc"
+#    docker volume ls   --filter "label=project=otel-poc"
+# ─────────────────────────────────────────────────────────────────────────────
+name: otel-poc
+
+# Common label block — DRY extension merged into every service
+x-common-labels: &common-labels
+  project: otel-poc
+  managed-by: docker-compose
+  environment: local-dev
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  3-Pillar Observability Stack
+#
+#  METRICS  → /actuator/prometheus ← Prometheus  |  Node Exporter ← Prometheus
+#  LOGS     → Loki4j → Loki
+#  TRACES   → OTLP HTTP → OTel Collector → Tempo
+#  GRAFANA  → single pane over Prometheus + Loki + Tempo
+# ═══════════════════════════════════════════════════════════════════════════════
+
+services:
+
+  # ─── Spring Boot Application ─────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      labels:
+        <<: *common-labels
+        component: spring-boot-app
+    container_name: otel-poc-app
+    labels:
+      <<: *common-labels
+      component: spring-boot-app
+    ports:
+      - "8081:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      OTEL_SERVICE_NAME: otel-observability-poc
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      OTEL_PROPAGATORS: tracecontext,baggage
+    depends_on:
+      - otel-collector
+      - loki
+    networks:
+      - observability
+    restart: unless-stopped
+
+  # ─── OpenTelemetry Collector ──────────────────────────────────────────────────
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.122.0
+    container_name: otel-poc-collector
+    labels:
+      <<: *common-labels
+      component: otel-collector
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./config/otel-collector-config.yml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8889:8889"
+    depends_on:
+      - tempo
+    networks:
+      - observability
+    restart: unless-stopped
+
+  # ─── Tempo — Distributed Tracing Backend ──────────────────────────────────────
+  tempo:
+    image: grafana/tempo:2.7.2
+    container_name: otel-poc-tempo
+    labels:
+      <<: *common-labels
+      component: tempo
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ./config/tempo-config.yml:/etc/tempo.yml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "3200:3200"
+    networks:
+      - observability
+    restart: unless-stopped
+
+  # ─── Prometheus — Metrics Storage ─────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v3.3.0
+    container_name: otel-poc-prometheus
+    labels:
+      <<: *common-labels
+      component: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --enable-feature=exemplar-storage
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - observability
+    restart: unless-stopped
+
+  # ─── Loki — Log Aggregation ───────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:3.4.2
+    container_name: otel-poc-loki
+    labels:
+      <<: *common-labels
+      component: loki
+    command: ["-config.file=/etc/loki/config.yml"]
+    volumes:
+      - ./config/loki-config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - observability
+    restart: unless-stopped
+
+  # ─── Grafana — Unified Visualization ──────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:12.0.0
+    container_name: otel-poc-grafana
+    labels:
+      <<: *common-labels
+      component: grafana
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_FEATURE_TOGGLES_ENABLE: traceqlEditor
+    volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    networks:
+      - observability
+    restart: unless-stopped
+
+  # ─── Node Exporter — Host Metrics ─────────────────────────────────────────────
+  node-exporter:
+    image: prom/node-exporter:v1.9.0
+    container_name: otel-poc-node-exporter
+    labels:
+      <<: *common-labels
+      component: node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    networks:
+      - observability
+    restart: unless-stopped
+
+networks:
+  observability:
+    driver: bridge
+    labels:
+      <<: *common-labels
+
+volumes:
+  prometheus-data:
+    labels:
+      <<: *common-labels
+      component: prometheus
+  grafana-data:
+    labels:
+      <<: *common-labels
+      component: grafana
+  loki-data:
+    labels:
+      <<: *common-labels
+      component: loki
+  tempo-data:
+    labels:
+      <<: *common-labels
+      component: tempo

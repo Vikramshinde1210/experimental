@@ -1,0 +1,62 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  OpenTelemetry Collector Configuration
+#
+#  RECEIVERS  : OTLP over gRPC (:4317) and HTTP (:4318)
+#               The Spring Boot app sends traces to :4318 (HTTP).
+#
+#  PROCESSORS : resource — stamps every span with environment=local-docker
+#               batch    — buffers spans before exporting (reduces connections)
+#
+#  EXPORTERS  : otlp/tempo  — forwards traces to Tempo via gRPC (internal net)
+#               prometheus  — exposes collector's own metrics on :8889
+#
+#  PIPELINES  : traces  → [otlp] → [resource, batch] → [tempo]
+#               metrics → [otlp] → [resource, batch] → [prometheus]
+#               (logs are handled directly: app → Loki via Loki4j appender)
+# ─────────────────────────────────────────────────────────────────────────────
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+
+  resource:
+    attributes:
+      - action: insert
+        key: environment
+        value: local-docker
+
+exporters:
+  # Forward traces to Tempo — internal Docker network, insecure gRPC
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  # Expose OTel Collector's own operational metrics for Prometheus to scrape
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [resource, batch]
+      exporters: [otlp/tempo]
+
+    metrics:
+      receivers: [otlp]
+      processors: [resource, batch]
+      exporters: [prometheus]
+
+  telemetry:
+    logs:
+      level: "warn"

@@ -1,0 +1,53 @@
+# ── Gradle ────────────────────────────────────────────────────────────────────
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# ── Spring Boot ───────────────────────────────────────────────────────────────
+*.jar
+*.war
+*.ear
+target/
+
+# ── IDE — IntelliJ IDEA ───────────────────────────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# ── IDE — VS Code ─────────────────────────────────────────────────────────────
+.vscode/
+*.code-workspace
+
+# ── IDE — Eclipse ─────────────────────────────────────────────────────────────
+.classpath
+.project
+.settings/
+bin/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Environment / secrets ─────────────────────────────────────────────────────
+.env
+.env.*
+*.pem
+*.key
+
+# ── Docker local state ────────────────────────────────────────────────────────
+# Named volume data is managed by Docker — never commit it
+docker-data/
+
+# ── Observability config secrets ──────────────────────────────────────────────
+# Keep all config files tracked (no secrets in this POC)
+# If you add auth tokens to grafana/loki/tempo configs, add them here:
+# config/grafana/provisioning/datasources/secrets.yml

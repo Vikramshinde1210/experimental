@@ -1,0 +1,60 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  Grafana Datasource Provisioning
+#
+#  Three datasources wired together so Grafana can correlate across pillars:
+#
+#  Prometheus ← exemplarTraceIdDestinations → links a metric data point to Tempo
+#  Loki       ← derivedFields               → extracts traceId from log line → Tempo
+#  Tempo      ← tracesToLogsV2              → opens matching Loki logs for a span
+#             ← serviceMap                  → powers the Service Map panel using Prometheus
+# ─────────────────────────────────────────────────────────────────────────────
+
+apiVersion: 1
+
+datasources:
+
+  # ── METRICS ────────────────────────────────────────────────────────────────
+  - name:      Prometheus
+    type:      prometheus
+    uid:       prometheus
+    url:       http://prometheus:9090
+    isDefault: true
+    jsonData:
+      exemplarTraceIdDestinations:
+        - name:           traceID
+          datasourceUid:  tempo
+
+  # ── LOGS ───────────────────────────────────────────────────────────────────
+  - name: Loki
+    type: loki
+    uid:  loki
+    url:  http://loki:3100
+    jsonData:
+      derivedFields:
+        - name:           TraceID
+          datasourceUid:  tempo
+          matcherRegex:   "trace_id=(\\w+)"
+          url:            '$${__value.raw}'
+
+  # ── TRACES ─────────────────────────────────────────────────────────────────
+  - name: Tempo
+    type: tempo
+    uid:  tempo
+    url:  http://tempo:3200
+    jsonData:
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false
+      lokiSearch:
+        datasourceUid: loki
+      tracesToLogsV2:
+        datasourceUid:    loki
+        spanStartTimeShift: "-1m"
+        spanEndTimeShift:   "1m"
+        filterByTraceID:  true
+        filterBySpanID:   false
+        customQuery:      true
+        query:            '{app="otel-observability-poc"} | = "${__span.traceId}"'
+      serviceMap:
+        datasourceUid: prometheus

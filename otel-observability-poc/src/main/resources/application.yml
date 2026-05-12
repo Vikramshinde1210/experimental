@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: otel-observability-poc
+
+server:
+  port: 8080
+
+# ─── Actuator & Metrics ───────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    # Every Micrometer metric gets these tags automatically.
+    # In Prometheus: application="otel-observability-poc", environment="local"
+    tags:
+      application: ${spring.application.name}
+      environment: local
+
+# ─── Logging ──────────────────────────────────────────────────────────────────
+# NOTE: tracing (sampling, OTLP endpoint) is now configured entirely via
+# OTel Java Agent environment variables (OTEL_*) in docker-compose.yml.
+# No management.otlp.tracing config needed here.
+logging:
+  level:
+    com.example: DEBUG
+    root: INFO
+
+# ─── Loki URL (read by logback-spring.xml via <springProperty>) ───────────────
+loki:
+  url: http://localhost:3100
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Docker profile — activated by SPRING_PROFILES_ACTIVE=docker
+# ═══════════════════════════════════════════════════════════════════════════════
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+management:
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      environment: docker
+
+loki:
+  url: http://loki:3100
