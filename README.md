@@ -9,6 +9,7 @@ A monorepo of self-contained Java/Spring Boot proof-of-concept projects. Each pr
 | [java-21-virtual-threads-poc](./java-21-virtual-threads-poc) | Project Loom virtual threads vs platform threads — performance comparison under concurrent I/O load using JMeter |
 | [kafka-demo](./kafka-demo) | Kafka producer/consumer with Spring Kafka — minimal end-to-end message flow via REST endpoint |
 | [otel-observability-poc](./otel-observability-poc) | Full 3-pillar observability (metrics, logs, traces) wired to the Grafana stack via OTel Java Agent, Prometheus, Loki, and Tempo |
+| [gcp-tfinfra Terraform Project](./gcp-tfinfra) | Terraform files for creating VM's and network on GCP |
 
 ## Structure
 
@@ -17,6 +18,8 @@ experimental/
 ├── java-21-virtual-threads-poc/   # Java 21, Spring Boot 4, Gradle
 ├── kafka-demo/                    # Java 17, Spring Boot 3, Spring Kafka
 └── otel-observability-poc/        # Java 21, Spring Boot 4, Docker Compose stack
+└── gcp-tfinfra/                   # Terraform, GCP
+
 ```
 
 ## Running a project
