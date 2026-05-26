@@ -1,7 +1,6 @@
 # experimental
 
-A monorepo of self-contained Java/Spring Boot proof-of-concept projects. Each project lives in its own folder, has its own Gradle build, and can be run independently.
-
+A collection of self-contained proof-of-concept projects covering any technology, language or stac. Each project lives in its own folder and can be run idependently. This repo is language and framework agnostic
 ## Projects
 
 | Project | What it explores |
@@ -10,6 +9,7 @@ A monorepo of self-contained Java/Spring Boot proof-of-concept projects. Each pr
 | [kafka-demo](./kafka-demo) | Kafka producer/consumer with Spring Kafka — minimal end-to-end message flow via REST endpoint |
 | [otel-observability-poc](./otel-observability-poc) | Full 3-pillar observability (metrics, logs, traces) wired to the Grafana stack via OTel Java Agent, Prometheus, Loki, and Tempo |
 | [gcp-tfinfra Terraform Project](./gcp-tfinfra) | Terraform files for creating VM's and network on GCP |
+| [pgbpuncer-poc](./pgbpuncer-poc) | PgBouncer connection pooling with PostgreSQL |
 
 ## Structure
 
@@ -19,16 +19,9 @@ experimental/
 ├── kafka-demo/                    # Java 17, Spring Boot 3, Spring Kafka
 └── otel-observability-poc/        # Java 21, Spring Boot 4, Docker Compose stack
 └── gcp-tfinfra/                   # Terraform, GCP
+└── pgbpuncer-poc/                 # PgBouncer + Postgres
 
 ```
 
-## Running a project
 
-Each project is independent — `cd` into it and use its own Gradle wrapper:
-
-```bash
-cd java-21-virtual-threads-poc
-./gradlew bootRun
-```
-
-Refer to the README inside each project for prerequisites (e.g. Kafka broker, Docker for the OTel stack).
+Each project is independent - refer to the README inside each project for prerequisites and run intructions

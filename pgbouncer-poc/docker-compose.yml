@@ -1,0 +1,125 @@
+name: pgbouncer-poc
+
+# ── Common labels ─────────────────────────────────────────────────────────────
+x-common-labels: &common-labels
+  project: pgbouncer-poc
+  managed-by: docker-compose
+  environment: local-dev
+
+# =============================================================================
+#  Services
+#
+#  postgres    — shared cluster with artificially low max_connections=25
+#                (mimics a real cluster approaching its limit under scale)
+#  pgbouncer   — connection pooler in front of all 3 databases
+#  simulator   — Python script that demonstrates direct vs pooled connections
+# =============================================================================
+services:
+
+  # ── PostgreSQL — shared cluster ─────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: pgbouncer-poc-postgres
+    labels:
+      <<: *common-labels
+      component: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pgpassword}
+      POSTGRES_DB: postgres
+    # max_connections=25 is intentionally low to make cluster saturation visible
+    # in the demo.  In production this is typically 1000+ (e.g. db.r6g.large = 1000).
+    command: >
+      postgres
+        -c max_connections=25
+        -c superuser_reserved_connections=3
+        -c log_connections=on
+        -c log_disconnections=on
+        -c log_line_prefix='%t [%p] [%a] [%d] '
+        -c log_destination=stderr
+        -c logging_collector=off
+        -c autovacuum=off
+    volumes:
+      - ./postgres/init-dbs.sql:/docker-entrypoint-initdb.d/init-dbs.sql:ro
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - pgbouncer-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # ── pgBouncer — connection pooler ───────────────────────────────────────────
+  pgbouncer:
+    build:
+      context: ./pgbouncer
+      labels:
+        <<: *common-labels
+        component: pgbouncer
+    container_name: pgbouncer-poc-bouncer
+    labels:
+      <<: *common-labels
+      component: pgbouncer
+    environment:
+      PGBOUNCER_USER: ${PGBOUNCER_USER:-appuser}
+      PGBOUNCER_PASSWORD: ${PGBOUNCER_PASSWORD:-apppassword}
+    ports:
+      - "${PGBOUNCER_PORT:-6432}:6432"
+    volumes:
+      # pgBouncer logs land here so they are visible from the host
+      - ./logs:/var/log/pgbouncer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - pgbouncer-net
+    restart: unless-stopped
+
+  # ── Simulator — demo script ──────────────────────────────────────────────────
+  simulator:
+    build:
+      context: ./simulator
+      labels:
+        <<: *common-labels
+        component: simulator
+    container_name: pgbouncer-poc-simulator
+    labels:
+      <<: *common-labels
+      component: simulator
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      PGBOUNCER_HOST: pgbouncer
+      PGBOUNCER_PORT: 6432
+      APP_USER: ${PGBOUNCER_USER:-appuser}
+      APP_PASSWORD: ${PGBOUNCER_PASSWORD:-apppassword}
+      MONITOR_USER: ${POSTGRES_USER:-postgres}
+      MONITOR_PASSWORD: ${POSTGRES_PASSWORD:-pgpassword}
+    volumes:
+      # Simulator writes simulate.log here; same mount as pgbouncer logs
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - pgbouncer-net
+    # Stays alive so you can exec into it or trigger the demo manually
+    command: tail -f /dev/null
+
+# ── Network ───────────────────────────────────────────────────────────────────
+networks:
+  pgbouncer-net:
+    driver: bridge
+    labels:
+      <<: *common-labels
+
+# ── Volumes ───────────────────────────────────────────────────────────────────
+volumes:
+  postgres-data:
+    labels:
+      <<: *common-labels
+      component: postgres

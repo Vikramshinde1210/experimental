@@ -1,0 +1,22 @@
+# Docker volumes & generated data
+postgres-data/
+logs/*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keep logs directory but ignore log files
+!logs/.gitkeep
