@@ -382,3 +382,9 @@ curl "http://localhost:8080/users/bloom/false-positives?samples=50000"
 REM View stats
 curl "http://localhost:8080/users/bloom/stats"
 ```
+How Big Tech Checks Your Username in Milliseconds ⚡
+
+![Architecture](use-case/usernames-search/How-Big-Techs-Search-Usernames.png)
+
+
+![Comparison](use-case/usernames-search/Comparison-with-other-methods.png)
