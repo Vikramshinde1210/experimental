@@ -1,0 +1,93 @@
+# H2 database files (local dev data)
+data/
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Maven (if used)
+target/
+
+# Compiled class files
+*.class
+
+# Package files
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+!gradle/wrapper/gradle-wrapper.jar
+
+# Logs
+*.log
+logs/
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*
+
+# Spring Boot
+HELP.md
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Eclipse ###
+.metadata
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+
+### macOS ###
+.DS_Store
+.AppleDouble
+.LSOverride
+
+### Windows ###
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+
+### Environment / secrets ###
+.env
+.env.*
+!.env.example
+*.pem
+*.key

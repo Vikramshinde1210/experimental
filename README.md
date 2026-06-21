@@ -11,6 +11,7 @@ A collection of self-contained proof-of-concept projects covering any technology
 | [gcp-tfinfra Terraform Project](./gcp-tfinfra) | Terraform files for creating VM's and network on GCP |
 | [pgbpuncer-poc](./pgbpuncer-poc) | PgBouncer connection pooling with PostgreSQL |
 | [custom-protocol](./custom-protocol) | Custom protocol over TCP in java |
+| [bloom-filter](./bloom-filter) | Bloom filter POC using spring and redis |
 
 ## Structure
 
@@ -22,6 +23,7 @@ experimental/
 └── gcp-tfinfra/                   # Terraform, GCP
 └── pgbpuncer-poc/                 # PgBouncer + Postgres
 └── custom-protocol/               # Java 17 + TCP
+└── bloom-filter/                  # Java 17 + Spring + Redis Bloom Filter
 
 ```
 
