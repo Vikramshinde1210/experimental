@@ -10,6 +10,7 @@ A collection of self-contained proof-of-concept projects covering any technology
 | [otel-observability-poc](./otel-observability-poc) | Full 3-pillar observability (metrics, logs, traces) wired to the Grafana stack via OTel Java Agent, Prometheus, Loki, and Tempo |
 | [gcp-tfinfra Terraform Project](./gcp-tfinfra) | Terraform files for creating VM's and network on GCP |
 | [pgbpuncer-poc](./pgbpuncer-poc) | PgBouncer connection pooling with PostgreSQL |
+| [custom-protocol](./custom-protocol) | Custom protocol over TCP in java |
 
 ## Structure
 
@@ -20,6 +21,7 @@ experimental/
 └── otel-observability-poc/        # Java 21, Spring Boot 4, Docker Compose stack
 └── gcp-tfinfra/                   # Terraform, GCP
 └── pgbpuncer-poc/                 # PgBouncer + Postgres
+└── custom-protocol/               # Java 17 + TCP
 
 ```
 
