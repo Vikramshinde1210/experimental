@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: oidc
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:your-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:your-client-secret}
+            # No scope override: Spring's built-in "google" provider preset
+            # (CommonOAuth2Provider.GOOGLE) already requests openid,profile,email.
+            # The "openid" scope is what makes Google return a signed ID token and
+            # makes Spring Security treat this as OIDC (OidcUser) instead of plain
+            # OAuth2 (OAuth2User) -- compare with the oauth2-client module.
+
+server:
+  port: 8084

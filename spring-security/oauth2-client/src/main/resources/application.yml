@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: oauth2-client
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:your-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:your-client-secret}
+            # Deliberately NOT requesting the "openid" scope. Google's token endpoint
+            # only issues an id_token when "openid" was granted, so omitting it forces
+            # Spring Security's plain OAuth2 login path (OAuth2User) instead of OIDC
+            # (OidcUser) -- see this module's README for why that matters.
+            scope:
+              - https://www.googleapis.com/auth/userinfo.email
+              - https://www.googleapis.com/auth/userinfo.profile
+
+server:
+  port: 8083
